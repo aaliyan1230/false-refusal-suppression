@@ -1,0 +1,8 @@
+name: qwen25_3b_fallback
+model_id: Qwen/Qwen2.5-3B-Instruct
+family: qwen25
+primary: false
+load_in_4bit: true
+dtype: auto
+device_map: auto
+notes: Repair-stack fallback when newer family support is unstable.

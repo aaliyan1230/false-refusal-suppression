@@ -1,0 +1,20 @@
+name: search
+trials: 24
+search_space:
+  edit_strength: [0.25, 0.5, 0.75, 1.0, 1.25]
+  direction_source:
+    - unsafe_refusal_direction
+    - false_refusal_direction
+    - borderline_vs_easy_direction
+    - false_vs_true_refusal_direction
+  module_subset:
+    - [attention_out_proj]
+    - [mlp_down_proj]
+    - [attention_out_proj, mlp_down_proj]
+  projected: [false, true]
+  norm_preserving: [false, true]
+selection_metrics:
+  - false_refusal_rate
+  - true_refusal_rate
+  - capability_score
+  - harmless_kl

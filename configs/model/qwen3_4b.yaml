@@ -1,0 +1,8 @@
+name: qwen3_4b
+model_id: Qwen/Qwen3-4B
+family: qwen3
+primary: true
+load_in_4bit: true
+dtype: auto
+device_map: auto
+notes: Preferred primary editing target for the first serious run.

@@ -1,0 +1,8 @@
+name: phi4_mini
+model_id: microsoft/Phi-4-mini-instruct
+family: phi4
+primary: false
+load_in_4bit: true
+dtype: auto
+device_map: auto
+notes: Cross-family confirmation baseline.

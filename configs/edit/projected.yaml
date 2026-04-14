@@ -1,0 +1,12 @@
+name: projected
+variant: projected_direction_ablation
+direction_source: false_refusal_direction
+projection_reference: compliant_direction
+edit_strength: 1.0
+module_targets:
+  - attention_out_proj
+  - mlp_down_proj
+layer_strategy: top_k_by_separability
+top_k_layers: 4
+projection: orthogonalize_against_reference
+norm_preserving: false

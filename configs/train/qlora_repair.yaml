@@ -1,0 +1,18 @@
+name: qlora_repair
+trainer: unsloth
+model_id: Qwen/Qwen2.5-3B-Instruct
+load_in_4bit: true
+lora_rank: 16
+lora_alpha: 32
+lora_dropout: 0.05
+epochs: 2
+learning_rate: 2.0e-4
+max_seq_length: 1024
+train_groups:
+  - benign_easy
+  - benign_borderline
+  - unsafe_true_refusal
+eval_metrics:
+  - false_refusal_rate
+  - true_refusal_rate
+  - harmless_kl

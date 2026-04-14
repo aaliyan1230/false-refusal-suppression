@@ -1,0 +1,8 @@
+name: gemma4_e2b
+model_id: google/gemma-4-E2B-it
+family: gemma4
+primary: false
+load_in_4bit: true
+dtype: auto
+device_map: auto
+notes: Secondary text-first experiment once the pipeline is stable.
