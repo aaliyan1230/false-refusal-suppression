@@ -16,17 +16,55 @@ The repo now has a working starter pipeline for:
 
 The remaining GPU-bound step is running the heavy model and notebook workflows in Kaggle.
 
-## Starter Data
+## Data
 
-The repo includes a small grouped starter prompt set at [data/processed/prompts/sample_prompts.jsonl](data/processed/prompts/sample_prompts.jsonl) and an exact family-preserving split config at [configs/data/prompt_sets_small.yaml](configs/data/prompt_sets_small.yaml).
+The repo includes two prompt inventories:
 
-Generate discovery, selection, and holdout manifests with:
+- [data/processed/prompts/sample_prompts.jsonl](data/processed/prompts/sample_prompts.jsonl): tiny smoke-test data for quick validation
+- [data/processed/prompts/pilot_prompts.jsonl](data/processed/prompts/pilot_prompts.jsonl): generated pilot benchmark with 64 prompts and exact grouped splits
+- [data/processed/prompts/pilot_prompts_gemini.jsonl](data/processed/prompts/pilot_prompts_gemini.jsonl): Gemini-augmented local benchmark with 128 prompts and exact grouped splits
+
+The pilot benchmark is built from family seeds in [data/raw/prompt_family_seeds.json](data/raw/prompt_family_seeds.json). You can regenerate it deterministically, or add Gemini paraphrases by passing `--use-gemini` to the builder. The script will read `GEMINI_API_KEY` from the environment or from the repo-root `.env` file.
+
+Data augmentation is intended to happen locally, not in Kaggle. The Kaggle notebooks now assume that prompt files and split manifests have already been generated and are present in the cloned repo.
+
+Generate the pilot prompt inventory with:
+
+```bash
+python scripts/build_prompt_sets.py \
+	--seed-families data/raw/prompt_family_seeds.json \
+	--output data/processed/prompts/pilot_prompts.jsonl \
+	--examples-per-family 4 \
+	--seed 7
+```
+
+Then generate discovery, selection, and holdout manifests with:
 
 ```bash
 python scripts/make_splits.py \
-	--input data/processed/prompts/sample_prompts.jsonl \
-	--output-dir data/processed/splits/sample_small \
-	--config configs/data/prompt_sets_small.yaml \
+	--input data/processed/prompts/pilot_prompts.jsonl \
+	--output-dir data/processed/splits/pilot \
+	--config configs/data/prompt_sets_pilot.yaml \
+	--seed 7
+```
+
+For the Gemini-augmented local benchmark, use:
+
+```bash
+python scripts/build_prompt_sets.py \
+	--seed-families data/raw/prompt_family_seeds.json \
+	--output data/processed/prompts/pilot_prompts_gemini.jsonl \
+	--examples-per-family 8 \
+	--seed 7 \
+	--use-gemini \
+	--gemini-model gemini-2.5-flash
+```
+
+```bash
+python scripts/make_splits.py \
+	--input data/processed/prompts/pilot_prompts_gemini.jsonl \
+	--output-dir data/processed/splits/pilot_gemini \
+	--config configs/data/prompt_sets_gemini_pilot.yaml \
 	--seed 7
 ```
 
@@ -37,8 +75,8 @@ python scripts/make_splits.py \
 ```bash
 python scripts/measure_activations.py \
 	--model-id Qwen/Qwen3-4B \
-	--split-path data/processed/splits/sample_small/discovery.jsonl \
-	--output artifacts/activations/sample_qwen3_discovery.json \
+	--split-path data/processed/splits/pilot_gemini/discovery.jsonl \
+	--output artifacts/activations/qwen3_gemini_pilot_discovery.json \
 	--capture-default-modules
 ```
 
@@ -46,10 +84,10 @@ python scripts/measure_activations.py \
 
 ```bash
 python scripts/compute_directions.py \
-	--activations artifacts/activations/sample_qwen3_discovery.json \
+	--activations artifacts/activations/qwen3_gemini_pilot_discovery.json \
 	--source-group-a benign_borderline \
 	--source-group-b benign_easy \
-	--output artifacts/directions/sample_qwen3_borderline_vs_easy.json
+	--output artifacts/directions/qwen3_gemini_pilot_borderline_vs_easy.json
 ```
 
 3. Search model edits on the selection split.
@@ -57,9 +95,9 @@ python scripts/compute_directions.py \
 ```bash
 python scripts/search_edits.py \
 	--model-id Qwen/Qwen3-4B \
-	--direction-artifact artifacts/directions/sample_qwen3_borderline_vs_easy.json \
-	--selection-split data/processed/splits/sample_small/selection.jsonl \
-	--output artifacts/edits/sample_qwen3_search.json
+	--direction-artifact artifacts/directions/qwen3_gemini_pilot_borderline_vs_easy.json \
+	--selection-split data/processed/splits/pilot_gemini/selection.jsonl \
+	--output artifacts/edits/qwen3_gemini_pilot_search.json
 ```
 
 4. Evaluate the best edit on holdout.
@@ -67,10 +105,10 @@ python scripts/search_edits.py \
 ```bash
 python scripts/run_eval.py \
 	--model-id Qwen/Qwen3-4B \
-	--prompts data/processed/splits/sample_small/holdout.jsonl \
-	--direction-artifact artifacts/directions/sample_qwen3_borderline_vs_easy.json \
-	--candidate-json artifacts/edits/sample_qwen3_search.json \
-	--output artifacts/eval/sample_qwen3_holdout.json
+	--prompts data/processed/splits/pilot_gemini/holdout.jsonl \
+	--direction-artifact artifacts/directions/qwen3_gemini_pilot_borderline_vs_easy.json \
+	--candidate-json artifacts/edits/qwen3_gemini_pilot_search.json \
+	--output artifacts/eval/qwen3_gemini_pilot_holdout.json
 ```
 
 5. Optionally run repair training.
@@ -78,9 +116,9 @@ python scripts/run_eval.py \
 ```bash
 python scripts/train_qlora_repair.py \
 	--model-id Qwen/Qwen3-4B \
-	--prompts data/processed/splits/sample_small/selection.jsonl \
-	--output-dir artifacts/repair/sample_qwen3 \
-	--output artifacts/repair/sample_qwen3.json
+	--prompts data/processed/splits/pilot_gemini/selection.jsonl \
+	--output-dir artifacts/repair/qwen3_gemini_pilot \
+	--output artifacts/repair/qwen3_gemini_pilot.json
 ```
 
 ## Notebooks

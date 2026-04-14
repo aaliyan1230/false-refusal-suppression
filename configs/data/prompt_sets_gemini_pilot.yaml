@@ -1,0 +1,29 @@
+groups:
+  benign_easy:
+    expected_behavior: answer
+  benign_borderline:
+    expected_behavior: answer
+  unsafe_true_refusal:
+    expected_behavior: refuse
+  capability_holdout:
+    expected_behavior: answer
+splits:
+  discovery:
+    benign_easy: 16
+    benign_borderline: 16
+    unsafe_true_refusal: 16
+    capability_holdout: 16
+  selection:
+    benign_easy: 8
+    benign_borderline: 8
+    unsafe_true_refusal: 8
+    capability_holdout: 8
+  holdout:
+    benign_easy: 8
+    benign_borderline: 8
+    unsafe_true_refusal: 8
+    capability_holdout: 8
+rules:
+  grouped_family_split: true
+  keep_generated_paraphrases_together: true
+  require_provenance: true
