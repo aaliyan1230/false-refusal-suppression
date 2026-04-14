@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from contextlib import ExitStack
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List
+from typing import Any, Dict, List
 
 
 @dataclass
@@ -19,7 +18,7 @@ class ActivationRecorder:
             module = modules[module_name]
 
             def hook(_module, _inputs, output, name=module_name):
-                self.outputs.setdefault(name, []).append(output)
+                self.outputs.setdefault(name, []).append(_detach_output(output))
 
             self._hooks.append(module.register_forward_hook(hook))
         return self
@@ -31,3 +30,25 @@ class ActivationRecorder:
         for hook in self._hooks:
             hook.remove()
         self._hooks.clear()
+
+
+def extract_last_token_vector(output: Any) -> List[float]:
+    tensor = _unwrap_output(output)
+    if not hasattr(tensor, 'ndim'):
+        raise TypeError('Expected a tensor-like output from the hooked module')
+    if tensor.ndim < 2:
+        raise ValueError('Expected a batched sequence activation tensor')
+    return tensor[0, -1, :].detach().float().cpu().tolist()
+
+
+def _detach_output(output: Any) -> Any:
+    tensor = _unwrap_output(output)
+    if hasattr(tensor, 'detach'):
+        return tensor.detach()
+    return tensor
+
+
+def _unwrap_output(output: Any) -> Any:
+    if isinstance(output, tuple):
+        return output[0]
+    return output

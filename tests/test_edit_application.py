@@ -22,3 +22,34 @@ def test_norm_preserving_edit_keeps_row_norms():
 
     assert abs(l2_norm(matrix[0]) - l2_norm(edited[0])) < 1e-9
     assert abs(l2_norm(matrix[1]) - l2_norm(edited[1])) < 1e-9
+
+
+def test_output_axis_ablation_removes_projected_column_component():
+    matrix = [[2.0, 0.0], [0.0, 3.0]]
+    direction = [1.0, 0.0]
+
+    edited = apply_directional_ablation(
+        matrix,
+        direction,
+        EditSpec(strength=1.0, norm_preserving=False, axis='output'),
+    )
+
+    assert edited[0][0] == 0.0
+    assert edited[1][0] == 0.0
+    assert edited[1][1] == 3.0
+
+
+def test_output_axis_norm_preserving_keeps_column_norms():
+    matrix = [[3.0, 0.0], [4.0, 5.0]]
+    direction = [1.0, 0.0]
+
+    edited = apply_directional_ablation(
+        matrix,
+        direction,
+        EditSpec(strength=1.0, norm_preserving=True, axis='output'),
+    )
+
+    original_first_column = [matrix[0][0], matrix[1][0]]
+    edited_first_column = [edited[0][0], edited[1][0]]
+
+    assert abs(l2_norm(original_first_column) - l2_norm(edited_first_column)) < 1e-9

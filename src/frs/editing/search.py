@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Iterable, List
+from dataclasses import dataclass, field
+from typing import Iterable, List, Mapping, Sequence
 
 
 @dataclass(frozen=True)
@@ -11,6 +11,13 @@ class EditCandidate:
     true_refusal_rate: float
     capability_retention: float
     harmless_kl_penalty: float
+    source_layer: str = ''
+    applied_layers: Sequence[int] = field(default_factory=tuple)
+    strength: float = 1.0
+    target_modules: Sequence[str] = field(default_factory=tuple)
+    norm_preserving: bool = False
+    axis: str = 'output'
+    metadata: Mapping[str, object] = field(default_factory=dict)
 
 
 def score_candidate(candidate: EditCandidate, w1: float = 1.0, w2: float = 1.0, w3: float = 1.0, w4: float = 1.0) -> float:
