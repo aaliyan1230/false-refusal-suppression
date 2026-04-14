@@ -84,44 +84,45 @@ def main() -> None:
     except ImportError as exc:
         raise RuntimeError('torch is required for activation measurement') from exc
 
-    for example in examples:
-        if recorder is not None:
-            recorder.clear()
+    try:
+        for example in examples:
+            if recorder is not None:
+                recorder.clear()
 
-        encoded = tokenize_prompt(model, tokenizer, example.prompt, max_input_length=args.max_input_length)
-        with torch.no_grad():
-            outputs = model(**encoded, output_hidden_states=True, use_cache=False)
+            encoded = tokenize_prompt(model, tokenizer, example.prompt, max_input_length=args.max_input_length)
+            with torch.no_grad():
+                outputs = model(**encoded, output_hidden_states=True, use_cache=False)
 
-        hidden_states = getattr(outputs, 'hidden_states', None)
-        if not hidden_states or len(hidden_states) <= 1:
-            raise RuntimeError('Model did not return per-layer hidden states')
+            hidden_states = getattr(outputs, 'hidden_states', None)
+            if not hidden_states or len(hidden_states) <= 1:
+                raise RuntimeError('Model did not return per-layer hidden states')
 
-        next_token_id = int(outputs.logits[:, -1, :].argmax(dim=-1)[0].item())
-        artifact['records'].append(
-            {
-                'id': example.id,
-                'group': example.group,
-                'topic': example.topic,
-                'expected_behavior': example.expected_behavior,
-                'family_id': example.resolved_family_id,
-                'prompt': example.prompt,
-                'predicted_next_token': tokenizer.decode([next_token_id], skip_special_tokens=False),
-            }
-        )
-
-        for layer_index, hidden_state in enumerate(hidden_states[1:]):
-            layer_name = f'layer_{layer_index:02d}'
-            artifact['layer_vectors'].setdefault(layer_name, {})[example.id] = (
-                hidden_state[0, -1, :].detach().float().cpu().tolist()
+            next_token_id = int(outputs.logits[:, -1, :].argmax(dim=-1)[0].item())
+            artifact['records'].append(
+                {
+                    'id': example.id,
+                    'group': example.group,
+                    'topic': example.topic,
+                    'expected_behavior': example.expected_behavior,
+                    'family_id': example.resolved_family_id,
+                    'prompt': example.prompt,
+                    'predicted_next_token': tokenizer.decode([next_token_id], skip_special_tokens=False),
+                }
             )
 
-        if recorder is not None:
-            for module_name, module_outputs in recorder.outputs.items():
-                if not module_outputs:
-                    continue
-                artifact['module_vectors'].setdefault(module_name, {})[example.id] = extract_last_token_vector(
-                    module_outputs[-1]
+            for layer_index, hidden_state in enumerate(hidden_states[1:]):
+                layer_name = f'layer_{layer_index:02d}'
+                artifact['layer_vectors'].setdefault(layer_name, {})[example.id] = (
+                    hidden_state[0, -1, :].detach().float().cpu().tolist()
                 )
+
+            if recorder is not None:
+                for module_name, module_outputs in recorder.outputs.items():
+                    if not module_outputs:
+                        continue
+                    artifact['module_vectors'].setdefault(module_name, {})[example.id] = extract_last_token_vector(
+                        module_outputs[-1]
+                    )
     finally:
         if recorder is not None:
             recorder.close()
