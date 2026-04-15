@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import time
 from dataclasses import asdict
 from pathlib import Path
 
@@ -48,6 +49,7 @@ def main() -> None:
     parser.add_argument('--torch-dtype', default='auto')
     parser.add_argument('--trust-remote-code', action='store_true')
     parser.add_argument('--load-in-4bit', action='store_true')
+    parser.add_argument('--write-partial-results', action='store_true')
     args = parser.parse_args()
 
     if args.candidates and not args.model_id and not args.direction_artifact and not args.selection_split:
@@ -99,57 +101,129 @@ def main() -> None:
     module_sets = build_module_sets(args.module_types or ['attn_out', 'mlp_down'])
     norm_options = [False, True] if args.include_norm_preserving else [False]
 
+    search_plan = build_search_plan(
+        direction_payload=direction_payload,
+        top_k_layers=args.top_k_layers,
+        strengths=strengths,
+        span_widths=span_widths,
+        module_sets=module_sets,
+        norm_options=norm_options,
+        max_layer_index=max_layer_index,
+    )
+    total_candidates = len(search_plan)
+    print(f'Loaded {len(examples)} selection prompts')
+    print(f'Base evaluation complete; evaluating {total_candidates} edit candidates')
+
     candidates = []
-    for ranked_layer in direction_layers:
-        source_layer = ranked_layer['name']
+    for candidate_index, plan_item in enumerate(search_plan, start=1):
+        source_layer = plan_item['source_layer']
+        applied_layers = plan_item['applied_layers']
+        module_types = plan_item['module_types']
+        strength = plan_item['strength']
+        norm_preserving = plan_item['norm_preserving']
         direction = direction_payload['directions'][source_layer]['direction']
-        source_index = parse_layer_index(source_layer)
-        candidate_layer_spans = build_layer_spans(source_index, span_widths, max_layer_index)
-        for applied_layers in candidate_layer_spans:
-            for module_types in module_sets:
-                targets = find_editable_modules(model, target_module_types=module_types, layers=applied_layers)
-                if not targets:
-                    continue
-                snapshots = snapshot_module_weights(model, targets)
-                try:
-                    for strength in strengths:
-                        for norm_preserving in norm_options:
-                            spec = EditSpec(strength=strength, norm_preserving=norm_preserving, axis=args.axis)
-                            apply_direction_to_model(model, direction, targets, spec)
-                            edited_metrics = evaluate_model(model, tokenizer, examples, generation_config)
-                            candidates.append(
-                                EditCandidate(
-                                    name=build_candidate_name(source_layer, applied_layers, module_types, strength, norm_preserving),
-                                    false_refusal_rate=false_refusal_rate(edited_metrics['responses_by_group'].get('benign_borderline', [])),
-                                    true_refusal_rate=true_refusal_rate(edited_metrics['responses_by_group'].get('unsafe_true_refusal', [])),
-                                    capability_retention=capability_retention(
-                                        base_metrics['capability_answer_rate'],
-                                        edited_metrics['capability_answer_rate'],
-                                    ),
-                                    harmless_kl_penalty=mean_kl_divergence(
-                                        base_metrics['capability_distributions'],
-                                        edited_metrics['capability_distributions'],
-                                    ),
-                                    source_layer=source_layer,
-                                    applied_layers=tuple(applied_layers),
-                                    strength=strength,
-                                    target_modules=tuple(module_types),
-                                    norm_preserving=norm_preserving,
-                                    axis=args.axis,
-                                    metadata={
-                                        'module_count': len(targets),
-                                        'separability_score': direction_payload['directions'][source_layer].get('separability_score'),
-                                        'capability_answer_rate': edited_metrics['capability_answer_rate'],
-                                    },
-                                )
-                            )
-                            restore_module_weights(model, snapshots)
-                finally:
-                    restore_module_weights(model, snapshots)
+        targets = find_editable_modules(model, target_module_types=module_types, layers=applied_layers)
+        if not targets:
+            print(
+                f'Skipping candidate {candidate_index}/{total_candidates}: '
+                f'{source_layer} layers={applied_layers} modules={module_types} (no matching targets)',
+                flush=True,
+            )
+            continue
+
+        snapshots = snapshot_module_weights(model, targets)
+        started_at = time.perf_counter()
+        print(
+            f'[{candidate_index}/{total_candidates}] '
+            f'source={source_layer} layers={applied_layers} modules={module_types} '
+            f'strength={strength} norm_preserving={norm_preserving}',
+            flush=True,
+        )
+        try:
+            spec = EditSpec(strength=strength, norm_preserving=norm_preserving, axis=args.axis)
+            apply_direction_to_model(model, direction, targets, spec)
+            edited_metrics = evaluate_model(model, tokenizer, examples, generation_config)
+            candidate = EditCandidate(
+                name=build_candidate_name(source_layer, applied_layers, module_types, strength, norm_preserving),
+                false_refusal_rate=false_refusal_rate(edited_metrics['responses_by_group'].get('benign_borderline', [])),
+                true_refusal_rate=true_refusal_rate(edited_metrics['responses_by_group'].get('unsafe_true_refusal', [])),
+                capability_retention=capability_retention(
+                    base_metrics['capability_answer_rate'],
+                    edited_metrics['capability_answer_rate'],
+                ),
+                harmless_kl_penalty=mean_kl_divergence(
+                    base_metrics['capability_distributions'],
+                    edited_metrics['capability_distributions'],
+                ),
+                source_layer=source_layer,
+                applied_layers=tuple(applied_layers),
+                strength=strength,
+                target_modules=tuple(module_types),
+                norm_preserving=norm_preserving,
+                axis=args.axis,
+                metadata={
+                    'module_count': len(targets),
+                    'separability_score': direction_payload['directions'][source_layer].get('separability_score'),
+                    'capability_answer_rate': edited_metrics['capability_answer_rate'],
+                },
+            )
+            candidates.append(candidate)
+            duration_seconds = time.perf_counter() - started_at
+            print(
+                f'Completed [{candidate_index}/{total_candidates}] in {duration_seconds:.1f}s: '
+                f'false_refusal={candidate.false_refusal_rate:.3f}, '
+                f'true_refusal={candidate.true_refusal_rate:.3f}, '
+                f'capability_retention={candidate.capability_retention:.3f}, '
+                f'harmless_kl={candidate.harmless_kl_penalty:.6f}',
+                flush=True,
+            )
+            if args.write_partial_results:
+                ranked_partial = [asdict(item) for item in rank_candidates(candidates)]
+                write_json(args.output, ranked_partial)
+        finally:
+            restore_module_weights(model, snapshots)
 
     ranked = [asdict(candidate) for candidate in rank_candidates(candidates)]
     write_json(args.output, ranked)
     print(args.output)
+
+
+def build_search_plan(
+    direction_payload: dict,
+    top_k_layers: int,
+    strengths: list[float],
+    span_widths: list[int],
+    module_sets: list[tuple[str, ...]],
+    norm_options: list[bool],
+    max_layer_index: int,
+) -> list[dict]:
+    direction_layers = direction_payload.get('ranked_layers') or []
+    direction_layers = direction_layers[:top_k_layers]
+    if not direction_layers:
+        direction_layers = [
+            {'name': name, 'score': entry.get('separability_score', 0.0)}
+            for name, entry in direction_payload.get('directions', {}).items()
+        ]
+
+    plan = []
+    for ranked_layer in direction_layers:
+        source_layer = ranked_layer['name']
+        source_index = parse_layer_index(source_layer)
+        candidate_layer_spans = build_layer_spans(source_index, span_widths, max_layer_index)
+        for applied_layers in candidate_layer_spans:
+            for module_types in module_sets:
+                for strength in strengths:
+                    for norm_preserving in norm_options:
+                        plan.append(
+                            {
+                                'source_layer': source_layer,
+                                'applied_layers': applied_layers,
+                                'module_types': module_types,
+                                'strength': strength,
+                                'norm_preserving': norm_preserving,
+                            }
+                        )
+    return plan
 
 
 def evaluate_model(model: object, tokenizer: object, examples: list, generation_config: TextGenerationConfig) -> dict:
