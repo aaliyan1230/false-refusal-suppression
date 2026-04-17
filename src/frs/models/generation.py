@@ -68,7 +68,7 @@ def tokenize_prompt(
     max_input_length: Optional[int] = None,
 ) -> dict:
     encoded = tokenizer(
-        prompt,
+        text=prompt,
         return_tensors='pt',
         truncation=max_input_length is not None,
         max_length=max_input_length,

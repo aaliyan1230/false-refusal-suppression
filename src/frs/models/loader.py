@@ -16,12 +16,20 @@ class ModelLoadConfig:
 def load_model_and_tokenizer(config: ModelLoadConfig) -> Tuple[object, object]:
     try:
         import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     except ImportError as exc:
         raise RuntimeError('transformers is required to load models') from exc
 
-    tokenizer = AutoTokenizer.from_pretrained(config.model_id, trust_remote_code=config.trust_remote_code)
-    if tokenizer.pad_token is None and tokenizer.eos_token is not None:
+    # Try AutoProcessor first (for multimodal models like Gemma 4), fall back to AutoTokenizer
+    tokenizer = None
+    try:
+        from transformers import AutoProcessor
+        tokenizer = AutoProcessor.from_pretrained(config.model_id, trust_remote_code=config.trust_remote_code)
+    except Exception:
+        pass
+    if tokenizer is None:
+        tokenizer = AutoTokenizer.from_pretrained(config.model_id, trust_remote_code=config.trust_remote_code)
+    if getattr(tokenizer, 'pad_token', None) is None and getattr(tokenizer, 'eos_token', None) is not None:
         tokenizer.pad_token = tokenizer.eos_token
 
     kwargs = {
@@ -32,7 +40,10 @@ def load_model_and_tokenizer(config: ModelLoadConfig) -> Tuple[object, object]:
     if resolved_dtype is not None:
         kwargs['torch_dtype'] = resolved_dtype
     if config.load_in_4bit:
-        kwargs['load_in_4bit'] = True
+        kwargs['quantization_config'] = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.float16,
+        )
     model = AutoModelForCausalLM.from_pretrained(config.model_id, **kwargs)
     model.eval()
     return model, tokenizer
