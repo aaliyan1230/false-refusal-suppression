@@ -22,13 +22,17 @@ def generate_text(model: object, tokenizer: object, prompt: str, config: Optiona
 
     generation_config = config or TextGenerationConfig()
     encoded = tokenize_prompt(model, tokenizer, prompt, max_input_length=generation_config.max_input_length)
+    # Resolve pad_token_id: processors (e.g. Gemma4Processor) store it on the inner tokenizer
+    _pad_id = getattr(tokenizer, 'pad_token_id', None)
+    if _pad_id is None and hasattr(tokenizer, 'tokenizer'):
+        _pad_id = getattr(tokenizer.tokenizer, 'pad_token_id', None)
     with torch.no_grad():
         output = model.generate(
             **encoded,
             max_new_tokens=generation_config.max_new_tokens,
             temperature=generation_config.temperature,
             do_sample=generation_config.do_sample,
-            pad_token_id=tokenizer.pad_token_id,
+            pad_token_id=_pad_id,
         )
     return tokenizer.decode(output[0], skip_special_tokens=True)
 
