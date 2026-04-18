@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 @dataclass(frozen=True)
 class ModelLoadConfig:
     model_id: str
-    load_in_4bit: bool = True
+    load_in_4bit: bool = False
     torch_dtype: str = 'auto'
     device_map: str = 'auto'
     trust_remote_code: bool = False
