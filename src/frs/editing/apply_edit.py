@@ -11,6 +11,7 @@ from frs.editing.projection import project_vector
 Matrix = List[List[float]]
 INPUT_AXIS = 'input'
 OUTPUT_AXIS = 'output'
+AUTO_AXIS = 'auto'
 
 ATTN_OUT_PATTERNS = (
     '.self_attn.o_proj',
@@ -35,10 +36,10 @@ MLP_DOWN_PATTERNS = (
 class EditSpec:
     strength: float = 1.0
     norm_preserving: bool = False
-    axis: str = INPUT_AXIS
+    axis: str = AUTO_AXIS
 
     def validate(self) -> None:
-        if self.axis not in {INPUT_AXIS, OUTPUT_AXIS}:
+        if self.axis not in {INPUT_AXIS, OUTPUT_AXIS, AUTO_AXIS}:
             raise ValueError(f'Unsupported edit axis: {self.axis}')
 
 
@@ -78,7 +79,24 @@ def apply_directional_ablation_tensor(matrix: object, direction: Sequence[float]
         raise ValueError('direction must have non-zero norm')
     direction_tensor = direction_tensor / norm
 
-    if spec.axis == INPUT_AXIS:
+    # Auto-resolve axis: pick whichever dimension matches the direction
+    resolved_axis = spec.axis
+    if resolved_axis == AUTO_AXIS:
+        d = direction_tensor.numel()
+        input_match = (matrix.shape[1] == d)
+        output_match = (matrix.shape[0] == d)
+        if input_match and not output_match:
+            resolved_axis = INPUT_AXIS
+        elif output_match and not input_match:
+            resolved_axis = OUTPUT_AXIS
+        elif input_match and output_match:
+            resolved_axis = INPUT_AXIS  # square matrix: default to input
+        else:
+            raise ValueError(
+                f'Auto axis: direction dim {d} matches neither input ({matrix.shape[1]}) nor output ({matrix.shape[0]})'
+            )
+
+    if resolved_axis == INPUT_AXIS:
         if matrix.shape[1] != direction_tensor.numel():
             raise ValueError(
                 f'Input-axis edit requires direction width {matrix.shape[1]}, got {direction_tensor.numel()}'

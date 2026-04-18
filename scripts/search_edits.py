@@ -42,7 +42,7 @@ def main() -> None:
     parser.add_argument('--span-width', action='append', dest='span_widths', type=int)
     parser.add_argument('--module-type', action='append', dest='module_types')
     parser.add_argument('--include-norm-preserving', action='store_true')
-    parser.add_argument('--axis', choices=('input', 'output'), default='output')
+    parser.add_argument('--axis', choices=('input', 'output', 'auto'), default='auto')
     parser.add_argument('--max-input-length', type=int, default=512)
     parser.add_argument('--max-new-tokens', type=int, default=96)
     parser.add_argument('--prompt-limit', type=int)

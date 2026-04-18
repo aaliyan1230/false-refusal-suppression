@@ -39,7 +39,7 @@ def main() -> None:
     parser.add_argument('--layer', action='append', dest='layers', type=int)
     parser.add_argument('--strength', type=float, default=1.0)
     parser.add_argument('--norm-preserving', action='store_true')
-    parser.add_argument('--axis', choices=('input', 'output'), default='output')
+    parser.add_argument('--axis', choices=('input', 'output', 'auto'), default='auto')
     parser.add_argument('--max-input-length', type=int, default=512)
     parser.add_argument('--max-new-tokens', type=int, default=96)
     parser.add_argument('--prompt-limit', type=int)
