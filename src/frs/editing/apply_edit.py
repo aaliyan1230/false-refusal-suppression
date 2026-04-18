@@ -169,14 +169,21 @@ def apply_direction_to_model(
     model: object,
     direction: Sequence[float],
     targets: Sequence[ModelEditTarget],
-    spec: EditSpec = EditSpec(axis=OUTPUT_AXIS),
+    spec: EditSpec = EditSpec(),
 ) -> List[ModelEditTarget]:
     modules = dict(model.named_modules())
+    applied: List[ModelEditTarget] = []
     for target in targets:
         module = modules[target.module_name]
-        edited_weight = apply_directional_ablation_tensor(module.weight.data, direction, spec)
+        weight = module.weight.data
+        # Skip modules where neither dimension matches the direction
+        d = len(direction)
+        if spec.axis == AUTO_AXIS and weight.shape[0] != d and weight.shape[1] != d:
+            continue
+        edited_weight = apply_directional_ablation_tensor(weight, direction, spec)
         module.weight.data.copy_(edited_weight)
-    return list(targets)
+        applied.append(target)
+    return applied
 
 
 def infer_module_type(module_name: str) -> Optional[str]:
