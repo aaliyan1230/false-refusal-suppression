@@ -150,7 +150,10 @@ def evaluate_model(model: object, tokenizer: object, examples: list, generation_
     capability_responses = []
     topic_breakdown = {}
     response_samples = []
-    for example in examples:
+    total = len(examples)
+    for idx, example in enumerate(examples, 1):
+        if idx % 25 == 0 or idx == total:
+            print(f'  [{idx}/{total}] prompts evaluated', flush=True)
         response = generate_text(model, tokenizer, example.prompt, generation_config)
         responses_by_group.setdefault(example.group, []).append(response)
         topic_bucket = topic_breakdown.setdefault(example.topic, {'count': 0, 'refusals': 0})

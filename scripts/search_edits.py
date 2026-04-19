@@ -250,7 +250,10 @@ def evaluate_model(model: object, tokenizer: object, examples: list, generation_
     responses_by_group = {}
     capability_distributions = []
     capability_responses = []
-    for example in examples:
+    total = len(examples)
+    for idx, example in enumerate(examples, 1):
+        if idx % 50 == 0 or idx == total:
+            print(f'  [{idx}/{total}] prompts evaluated', flush=True)
         response = generate_text(model, tokenizer, example.prompt, generation_config)
         responses_by_group.setdefault(example.group, []).append(response)
         if example.group == 'capability_holdout':
