@@ -50,6 +50,8 @@ def main() -> None:
     parser.add_argument('--trust-remote-code', action='store_true')
     parser.add_argument('--load-in-4bit', action='store_true')
     parser.add_argument('--write-partial-results', action='store_true')
+    parser.add_argument('--resume', action='store_true',
+                        help='Resume from partial results in --output, skipping already-completed candidates')
     args = parser.parse_args()
 
     if args.candidates and not args.model_id and not args.direction_artifact and not args.selection_split:
@@ -115,6 +117,17 @@ def main() -> None:
     print(f'Base evaluation complete; evaluating {total_candidates} edit candidates')
 
     candidates = []
+    completed_names: set[str] = set()
+    if args.resume and Path(args.output).exists():
+        existing = read_json(args.output)
+        for item in existing:
+            candidates.append(EditCandidate(**{
+                k: tuple(v) if isinstance(v, list) else v
+                for k, v in item.items()
+            }))
+            completed_names.add(item['name'])
+        print(f'Resumed with {len(candidates)} previously completed candidates')
+
     for candidate_index, plan_item in enumerate(search_plan, start=1):
         source_layer = plan_item['source_layer']
         applied_layers = plan_item['applied_layers']
@@ -122,6 +135,13 @@ def main() -> None:
         strength = plan_item['strength']
         norm_preserving = plan_item['norm_preserving']
         direction = direction_payload['directions'][source_layer]['direction']
+        candidate_name = build_candidate_name(source_layer, applied_layers, module_types, strength, norm_preserving)
+        if candidate_name in completed_names:
+            print(
+                f'[{candidate_index}/{total_candidates}] SKIP (already completed): {candidate_name}',
+                flush=True,
+            )
+            continue
         targets = find_editable_modules(model, target_module_types=module_types, layers=applied_layers)
         if not targets:
             print(

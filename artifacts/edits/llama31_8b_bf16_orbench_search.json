@@ -1,0 +1,184 @@
+[
+  {
+    "name": "layer_14|layers=14|modules=attn_out|strength=0.5|plain",
+    "false_refusal_rate": 0.012,
+    "true_refusal_rate": 0.09,
+    "capability_retention": 1.0,
+    "harmless_kl_penalty": 0.000577,
+    "source_layer": "layer_14",
+    "applied_layers": [
+      14
+    ],
+    "strength": 0.5,
+    "target_modules": [
+      "attn_out"
+    ],
+    "norm_preserving": false,
+    "axis": "auto",
+    "metadata": {}
+  },
+  {
+    "name": "layer_14|layers=14|modules=attn_out|strength=1.0|plain",
+    "false_refusal_rate": 0.016,
+    "true_refusal_rate": 0.075,
+    "capability_retention": 1.0,
+    "harmless_kl_penalty": 0.000922,
+    "source_layer": "layer_14",
+    "applied_layers": [
+      14
+    ],
+    "strength": 1.0,
+    "target_modules": [
+      "attn_out"
+    ],
+    "norm_preserving": false,
+    "axis": "auto",
+    "metadata": {}
+  },
+  {
+    "name": "layer_14|layers=14|modules=mlp_down|strength=0.5|plain",
+    "false_refusal_rate": 0.024,
+    "true_refusal_rate": 0.104,
+    "capability_retention": 1.0,
+    "harmless_kl_penalty": 0.001671,
+    "source_layer": "layer_14",
+    "applied_layers": [
+      14
+    ],
+    "strength": 0.5,
+    "target_modules": [
+      "mlp_down"
+    ],
+    "norm_preserving": false,
+    "axis": "auto",
+    "metadata": {}
+  },
+  {
+    "name": "layer_14|layers=14|modules=mlp_down|strength=1.0|plain",
+    "false_refusal_rate": 0.024,
+    "true_refusal_rate": 0.097,
+    "capability_retention": 1.0,
+    "harmless_kl_penalty": 0.002561,
+    "source_layer": "layer_14",
+    "applied_layers": [
+      14
+    ],
+    "strength": 1.0,
+    "target_modules": [
+      "mlp_down"
+    ],
+    "norm_preserving": false,
+    "axis": "auto",
+    "metadata": {}
+  },
+  {
+    "name": "layer_14|layers=14|modules=attn_out+mlp_down|strength=0.5|plain",
+    "false_refusal_rate": 0.016,
+    "true_refusal_rate": 0.09,
+    "capability_retention": 1.0,
+    "harmless_kl_penalty": 0.001528,
+    "source_layer": "layer_14",
+    "applied_layers": [
+      14
+    ],
+    "strength": 0.5,
+    "target_modules": [
+      "attn_out",
+      "mlp_down"
+    ],
+    "norm_preserving": false,
+    "axis": "auto",
+    "metadata": {}
+  },
+  {
+    "name": "layer_14|layers=14|modules=attn_out+mlp_down|strength=1.0|plain",
+    "false_refusal_rate": 0.027,
+    "true_refusal_rate": 0.097,
+    "capability_retention": 1.0,
+    "harmless_kl_penalty": 0.00326,
+    "source_layer": "layer_14",
+    "applied_layers": [
+      14
+    ],
+    "strength": 1.0,
+    "target_modules": [
+      "attn_out",
+      "mlp_down"
+    ],
+    "norm_preserving": false,
+    "axis": "auto",
+    "metadata": {}
+  },
+  {
+    "name": "layer_13|layers=13|modules=attn_out|strength=0.5|plain",
+    "false_refusal_rate": 0.016,
+    "true_refusal_rate": 0.082,
+    "capability_retention": 1.0,
+    "harmless_kl_penalty": 0.000572,
+    "source_layer": "layer_13",
+    "applied_layers": [
+      13
+    ],
+    "strength": 0.5,
+    "target_modules": [
+      "attn_out"
+    ],
+    "norm_preserving": false,
+    "axis": "auto",
+    "metadata": {}
+  },
+  {
+    "name": "layer_13|layers=13|modules=attn_out|strength=1.0|plain",
+    "false_refusal_rate": 0.016,
+    "true_refusal_rate": 0.067,
+    "capability_retention": 1.0,
+    "harmless_kl_penalty": 0.001045,
+    "source_layer": "layer_13",
+    "applied_layers": [
+      13
+    ],
+    "strength": 1.0,
+    "target_modules": [
+      "attn_out"
+    ],
+    "norm_preserving": false,
+    "axis": "auto",
+    "metadata": {}
+  },
+  {
+    "name": "layer_13|layers=13|modules=mlp_down|strength=0.5|plain",
+    "false_refusal_rate": 0.02,
+    "true_refusal_rate": 0.097,
+    "capability_retention": 1.0,
+    "harmless_kl_penalty": 0.001413,
+    "source_layer": "layer_13",
+    "applied_layers": [
+      13
+    ],
+    "strength": 0.5,
+    "target_modules": [
+      "mlp_down"
+    ],
+    "norm_preserving": false,
+    "axis": "auto",
+    "metadata": {}
+  },
+  {
+    "name": "layer_13|layers=13|modules=mlp_down|strength=1.0|plain",
+    "false_refusal_rate": 0.016,
+    "true_refusal_rate": 0.097,
+    "capability_retention": 1.0,
+    "harmless_kl_penalty": 0.003092,
+    "source_layer": "layer_13",
+    "applied_layers": [
+      13
+    ],
+    "strength": 1.0,
+    "target_modules": [
+      "mlp_down"
+    ],
+    "norm_preserving": false,
+    "axis": "auto",
+    "metadata": {}
+  }
+]
