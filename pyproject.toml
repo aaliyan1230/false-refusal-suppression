@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "false-refusal-suppression"
+name = "refusal-suppression"
 version = "0.1.0"
-description = "Research scaffold for false-refusal suppression via activation editing and lightweight repair"
+description = "Locate and ablate the refusal direction in instruction-tuned LLMs via activation geometry and directional weight editing"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
